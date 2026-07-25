@@ -1,4 +1,4 @@
-// ===== APP: GASTOS NO CARTÃO (v2) =====
+// ===== APP: GASTOS NO CARTÃO (v3) =====
 
 // COLE AQUI A URL DO SEU GOOGLE APPS SCRIPT (a mesma de antes)
 const API_URL = 'https://script.google.com/macros/s/AKfycbwVjTKTl1tZ-21nmC1GpRqDrEBYz6VMq7iBcrGVAhaBTg6rYNjJw4X9TLa7g6xkoW-GfQ/exec';
@@ -72,6 +72,7 @@ function renderizarLista(compras) {
         '<div class="item-actions">' +
           '<div class="valor">' + formatarMoeda(c['Valor'] || 0) + '</div>' +
           '<button class="btn-editar" onclick="editarCompra(' + c._linha + ')">✏️</button>' +
+          '<button class="btn-deletar" onclick="deletarCompra(' + c._linha + ')">🗑️</button>' +
         '</div>' +
       '</div>';
   }).join('');
@@ -87,14 +88,12 @@ async function salvarCompra() {
   var data = document.getElementById('data').value;
   var tipoCompra = document.getElementById('tipoCompra').value;
 
-  // Validações
   if (!usuario) { mostrarToast('Selecione quem está registrando', true); return; }
   if (!valor || parseFloat(valor) <= 0) { mostrarToast('Digite o valor da compra', true); return; }
   if (!produto) { mostrarToast('Digite o nome do produto', true); return; }
   if (!data) { mostrarToast('Selecione a data', true); return; }
   if (!tipoCompra) { mostrarToast('Selecione o tipo de compra', true); return; }
 
-  // Lembra o último usuário selecionado
   localStorage.setItem('usuario', usuario);
 
   var dados = {
@@ -117,8 +116,6 @@ async function salvarCompra() {
 
     if (result.success) {
       var totalNovo = result.totalParcial || 0;
-
-      // Verificar faixas ultrapassadas
       var cruzadas = obterFaixasCruzadas(totalParcialAtual, totalNovo);
 
       if (cruzadas.length > 0) {
@@ -166,6 +163,32 @@ function editarCompra(linha) {
   elModal.classList.add('active');
 }
 
+// DELETAR COMPRA
+async function deletarCompra(linha) {
+  if (!confirm('Tem certeza que deseja excluir esta compra?')) return;
+
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ acao: 'deletar', linha: linha }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    });
+    const result = await resp.json();
+
+    if (result.success) {
+      var totalNovo = result.totalParcial || 0;
+      totalParcialAtual = totalNovo;
+      elTotalParcial.textContent = formatarMoeda(totalNovo);
+      mostrarToast('Compra excluída!');
+      carregarCompras();
+    } else {
+      mostrarToast('Erro ao excluir. Tente novamente.', true);
+    }
+  } catch (err) {
+    mostrarToast('Erro de conexão. Tente novamente.', true);
+  }
+}
+
 // VERIFICAR FAIXAS DE ALERTA
 function obterFaixasCruzadas(anterior, novo) {
   var cruzadas = [];
@@ -184,7 +207,6 @@ function abrirModal() {
   elBtnSalvar.textContent = 'Salvar compra';
   document.getElementById('data').valueAsDate = new Date();
 
-  // Pré-seleciona o último usuário usado
   var usuarioSalvo = localStorage.getItem('usuario');
   if (usuarioSalvo) document.getElementById('usuario').value = usuarioSalvo;
 
