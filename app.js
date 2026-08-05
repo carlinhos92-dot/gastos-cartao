@@ -64,11 +64,11 @@ async function carregarCompras() {
 // RENDERIZAR CATEGORIAS (barras de progresso)
 function renderizarCategorias(categorias) {
   var html = '';
-  for (var i = 0; i &lt; CATEGORIAS.length; i++) {
+  for (var i = 0; i < CATEGORIAS.length; i++) {
     var cat = CATEGORIAS[i];
     var gasto = categorias[cat.nome] || 0;
     var pct = Math.min((gasto / cat.max) * 100, 100);
-    var cor = pct &lt; 60 ? '#16a34a' : (pct &lt; 80 ? '#d97706' : '#dc2626');
+    var cor = pct < 60 ? '#16a34a' : (pct < 80 ? '#d97706' : '#dc2626');
 
     html += '<div class="cat-item">' +
       '<div class="cat-row">' +
@@ -132,7 +132,7 @@ async function salvarCompra() {
   var parcela = document.getElementById('parcela').value;
 
   if (!usuario) { mostrarToast('Selecione quem está registrando', true); return; }
-  if (!valor || parseFloat(valor) &lt;= 0) { mostrarToast('Digite o valor da compra', true); return; }
+  if (!valor || parseFloat(valor) <= 0) { mostrarToast('Digite o valor da compra', true); return; }
   if (!produto) { mostrarToast('Digite o nome do produto', true); return; }
   if (!data) { mostrarToast('Selecione a data', true); return; }
   if (!categoria) { mostrarToast('Selecione a categoria', true); return; }
@@ -185,7 +185,7 @@ async function salvarCompra() {
 // EDITAR COMPRA
 function editarCompra(linha) {
   var compra = null;
-  for (var i = 0; i &lt; comprasCarregadas.length; i++) {
+  for (var i = 0; i < comprasCarregadas.length; i++) {
     if (comprasCarregadas[i]._linha === linha) {
       compra = comprasCarregadas[i];
       break;
@@ -234,8 +234,8 @@ async function deletarCompra(linha) {
 // VERIFICAR FAIXAS DE ALERTA
 function obterFaixasCruzadas(anterior, novo) {
   var cruzadas = [];
-  for (var i = 0; i &lt; FAIXAS.length; i++) {
-    if (anterior &lt; FAIXAS[i] && novo >= FAIXAS[i]) {
+  for (var i = 0; i < FAIXAS.length; i++) {
+    if (anterior < FAIXAS[i] && novo >= FAIXAS[i]) {
       cruzadas.push(FAIXAS[i]);
     }
   }
