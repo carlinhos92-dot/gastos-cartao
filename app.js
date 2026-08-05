@@ -1,15 +1,26 @@
-// ===== APP: GASTOS NO CARTÃO (v3) =====
+// ===== APP: GASTOS NO CARTÃO (v4) =====
 
 // COLE AQUI A URL DO SEU GOOGLE APPS SCRIPT (a mesma de antes)
 const API_URL = 'https://script.google.com/macros/s/AKfycbwVjTKTl1tZ-21nmC1GpRqDrEBYz6VMq7iBcrGVAhaBTg6rYNjJw4X9TLa7g6xkoW-GfQ/exec';
 
-// Faixas de alerta (total parcial acumulado)
+// Faixas de alerta (sobre o Total Geral = À vista + Parcelado)
 const FAIXAS = [6000, 6500, 7000, 7500, 8000, 8500];
 
+// Config das categorias com barra de progresso
+const CATEGORIAS = [
+  { nome: 'Restaurante', max: 400 },
+  { nome: 'Transporte', max: 1200 },
+  { nome: 'Mercado', max: 1800 },
+  { nome: 'Remédio', max: 600 }
+];
+
 // ELEMENTOS
-const elTotalMes = document.getElementById('totalMes');
-const elTotalParcial = document.getElementById('totalParcial');
+const elTotalAvista = document.getElementById('totalAvista');
+const elTotalParcelado = document.getElementById('totalParcelado');
+const elTotalGeral = document.getElementById('totalGeral');
+const elCategorias = document.getElementById('categoriasContainer');
 const elLista = document.getElementById('listaCompras');
+const elCount = document.getElementById('listaCount');
 const elStatus = document.getElementById('status');
 const elModal = document.getElementById('modal');
 const elToast = document.getElementById('toast');
@@ -17,7 +28,7 @@ const elModalTitulo = document.getElementById('modalTitulo');
 const elBtnSalvar = document.getElementById('btnSalvar');
 
 // ESTADO
-var totalParcialAtual = 0;
+var totalGeralAtual = 0;
 var linhaEditando = null;
 var comprasCarregadas = [];
 
@@ -35,10 +46,12 @@ async function carregarCompras() {
     const result = await resp.json();
 
     if (result.success) {
-      elTotalMes.textContent = formatarMoeda(result.totalMes);
-      elTotalParcial.textContent = formatarMoeda(result.totalParcial || 0);
-      totalParcialAtual = result.totalParcial || 0;
+      elTotalAvista.textContent = formatarMoeda(result.totalAvista || 0);
+      elTotalParcelado.textContent = formatarMoeda(result.totalParcelado || 0);
+      elTotalGeral.textContent = formatarMoeda(result.totalGeral || 0);
+      totalGeralAtual = result.totalGeral || 0;
       comprasCarregadas = result.data || [];
+      renderizarCategorias(result.categorias || {});
       renderizarLista(comprasCarregadas);
     } else {
       elStatus.textContent = 'Erro ao carregar dados.';
@@ -48,10 +61,34 @@ async function carregarCompras() {
   }
 }
 
+// RENDERIZAR CATEGORIAS (barras de progresso)
+function renderizarCategorias(categorias) {
+  var html = '';
+  for (var i = 0; i &lt; CATEGORIAS.length; i++) {
+    var cat = CATEGORIAS[i];
+    var gasto = categorias[cat.nome] || 0;
+    var pct = Math.min((gasto / cat.max) * 100, 100);
+    var cor = pct &lt; 60 ? '#16a34a' : (pct &lt; 80 ? '#d97706' : '#dc2626');
+
+    html += '<div class="cat-item">' +
+      '<div class="cat-row">' +
+        '<span class="cat-nome">' + cat.nome + '</span>' +
+        '<span class="cat-valores">' + formatarMoeda(gasto) + ' / ' + formatarMoeda(cat.max) + '</span>' +
+      '</div>' +
+      '<div class="cat-bar-bg">' +
+        '<div class="cat-bar-fill" style="width:' + pct + '%; background:' + cor + '"></div>' +
+      '</div>' +
+    '</div>';
+  }
+  elCategorias.innerHTML = html;
+}
+
 // RENDERIZAR LISTA
 function renderizarLista(compras) {
+  elCount.textContent = compras.length;
+
   if (!compras || compras.length === 0) {
-    elLista.innerHTML = '<div class="vazio">Nenhuma compra registrada ainda.<br>Toque no + para começar.</div>';
+    elLista.innerHTML = '<div class="vazio">Nenhuma compra registrada.<br>Toque no + para começar.</div>';
     elStatus.textContent = '';
     return;
   }
@@ -59,22 +96,27 @@ function renderizarLista(compras) {
   var ordenadas = compras.slice().reverse();
 
   elLista.innerHTML = ordenadas.map(function (c) {
-    return '' +
-      '<div class="item">' +
-        '<div class="info">' +
-          '<div class="produto">' + escHTML(c['Produto'] || '') + '</div>' +
-          '<div class="meta">' +
-            '<span class="badge">' + escHTML(c['Usuário'] || '—') + '</span>' +
-            formatarData(c['Data']) +
-            ' • Tipo: ' + escHTML(c['Tipo de Compra'] || '—') +
-          '</div>' +
+    var parcela = c['Parcela'] || '';
+    var parcelaBadge = parcela
+      ? '<span class="badge ' + (parcela === 'À vista' ? 'badge-avista' : 'badge-parcelado') + '">' + escHTML(parcela) + '</span>'
+      : '';
+
+    return '<div class="item">' +
+      '<div class="info">' +
+        '<div class="produto">' + escHTML(c['Produto'] || '') + '</div>' +
+        '<div class="meta">' +
+          '<span class="badge badge-cat">' + escHTML(c['Categoria'] || '—') + '</span>' +
+          '<span class="badge badge-user">' + escHTML(c['Usuário'] || '—') + '</span>' +
+          parcelaBadge +
+          '<span>' + formatarData(c['Data']) + '</span>' +
         '</div>' +
-        '<div class="item-actions">' +
-          '<div class="valor">' + formatarMoeda(c['Valor'] || 0) + '</div>' +
-          '<button class="btn-editar" onclick="editarCompra(' + c._linha + ')">✏️</button>' +
-          '<button class="btn-deletar" onclick="deletarCompra(' + c._linha + ')">🗑️</button>' +
-        '</div>' +
-      '</div>';
+      '</div>' +
+      '<div class="item-actions">' +
+        '<div class="valor">' + formatarMoeda(c['Valor'] || 0) + '</div>' +
+        '<button class="btn-editar" onclick="editarCompra(' + c._linha + ')">✏️</button>' +
+        '<button class="btn-deletar" onclick="deletarCompra(' + c._linha + ')">🗑️</button>' +
+      '</div>' +
+    '</div>';
   }).join('');
 
   elStatus.textContent = '';
@@ -86,13 +128,15 @@ async function salvarCompra() {
   var valor = document.getElementById('valor').value;
   var produto = document.getElementById('produto').value.trim();
   var data = document.getElementById('data').value;
-  var tipoCompra = document.getElementById('tipoCompra').value;
+  var categoria = document.getElementById('categoria').value;
+  var parcela = document.getElementById('parcela').value;
 
   if (!usuario) { mostrarToast('Selecione quem está registrando', true); return; }
-  if (!valor || parseFloat(valor) <= 0) { mostrarToast('Digite o valor da compra', true); return; }
+  if (!valor || parseFloat(valor) &lt;= 0) { mostrarToast('Digite o valor da compra', true); return; }
   if (!produto) { mostrarToast('Digite o nome do produto', true); return; }
   if (!data) { mostrarToast('Selecione a data', true); return; }
-  if (!tipoCompra) { mostrarToast('Selecione o tipo de compra', true); return; }
+  if (!categoria) { mostrarToast('Selecione a categoria', true); return; }
+  if (!parcela) { mostrarToast('Selecione o tipo de parcela', true); return; }
 
   localStorage.setItem('usuario', usuario);
 
@@ -102,8 +146,9 @@ async function salvarCompra() {
     valor: valor,
     produto: produto,
     data: data,
-    tipoCompra: tipoCompra,
-    usuario: usuario
+    categoria: categoria,
+    usuario: usuario,
+    parcela: parcela
   };
 
   try {
@@ -115,19 +160,17 @@ async function salvarCompra() {
     const result = await resp.json();
 
     if (result.success) {
-      var totalNovo = result.totalParcial || 0;
-      var cruzadas = obterFaixasCruzadas(totalParcialAtual, totalNovo);
+      var totalNovo = result.totalGeral || 0;
+      var cruzadas = obterFaixasCruzadas(totalGeralAtual, totalNovo);
 
       if (cruzadas.length > 0) {
-        var msg = '⚠️ Total parcial ultrapassou ' + cruzadas.map(formatarMoeda).join(' e ') + '!';
+        var msg = '⚠️ Total ultrapassou ' + cruzadas.map(formatarMoeda).join(' e ') + '!';
         mostrarToast(msg, true, 5000);
       } else {
         mostrarToast(linhaEditando ? 'Compra atualizada!' : 'Compra registrada!');
       }
 
-      totalParcialAtual = totalNovo;
-      elTotalParcial.textContent = formatarMoeda(totalNovo);
-
+      totalGeralAtual = totalNovo;
       fecharModal();
       limparForm();
       carregarCompras();
@@ -142,7 +185,7 @@ async function salvarCompra() {
 // EDITAR COMPRA
 function editarCompra(linha) {
   var compra = null;
-  for (var i = 0; i < comprasCarregadas.length; i++) {
+  for (var i = 0; i &lt; comprasCarregadas.length; i++) {
     if (comprasCarregadas[i]._linha === linha) {
       compra = comprasCarregadas[i];
       break;
@@ -158,7 +201,8 @@ function editarCompra(linha) {
   document.getElementById('valor').value = compra['Valor'] || '';
   document.getElementById('produto').value = compra['Produto'] || '';
   document.getElementById('data').value = formatDataParaInput(compra['Data']);
-  document.getElementById('tipoCompra').value = compra['Tipo de Compra'] || '';
+  document.getElementById('categoria').value = compra['Categoria'] || '';
+  document.getElementById('parcela').value = compra['Parcela'] || '';
 
   elModal.classList.add('active');
 }
@@ -176,9 +220,7 @@ async function deletarCompra(linha) {
     const result = await resp.json();
 
     if (result.success) {
-      var totalNovo = result.totalParcial || 0;
-      totalParcialAtual = totalNovo;
-      elTotalParcial.textContent = formatarMoeda(totalNovo);
+      totalGeralAtual = result.totalGeral || 0;
       mostrarToast('Compra excluída!');
       carregarCompras();
     } else {
@@ -192,8 +234,8 @@ async function deletarCompra(linha) {
 // VERIFICAR FAIXAS DE ALERTA
 function obterFaixasCruzadas(anterior, novo) {
   var cruzadas = [];
-  for (var i = 0; i < FAIXAS.length; i++) {
-    if (anterior < FAIXAS[i] && novo >= FAIXAS[i]) {
+  for (var i = 0; i &lt; FAIXAS.length; i++) {
+    if (anterior &lt; FAIXAS[i] && novo >= FAIXAS[i]) {
       cruzadas.push(FAIXAS[i]);
     }
   }
@@ -227,7 +269,8 @@ function limparForm() {
   elBtnSalvar.textContent = 'Salvar compra';
   document.getElementById('valor').value = '';
   document.getElementById('produto').value = '';
-  document.getElementById('tipoCompra').value = '';
+  document.getElementById('categoria').value = '';
+  document.getElementById('parcela').value = '';
   document.getElementById('data').valueAsDate = new Date();
 }
 
