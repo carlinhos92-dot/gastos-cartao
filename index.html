@@ -3,59 +3,207 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1a73e8">
+  <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
   <title>Gastos no Cartão</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    :root { --azul: #1a73e8; --azul-escuro: #1557b0; --verde: #16a34a; --vermelho: #dc2626; --cinza: #f1f3f4; --cinza-esc: #5f6368; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--cinza); color: #202124; min-height: 100vh; padding-bottom: 80px; }
+    :root {
+      --azul: #2563eb;
+      --azul-esc: #1e3a8a;
+      --verde: #16a34a;
+      --vermelho: #dc2626;
+      --amarelo: #d97706;
+      --cinza-bg: #f1f5f9;
+      --cinza: #e2e8f0;
+      --cinza-esc: #64748b;
+      --texto: #1e293b;
+      --branco: #ffffff;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--cinza-bg);
+      color: var(--texto);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
 
     /* HEADER */
-    .header { background: var(--azul); color: white; padding: 20px 16px; position: sticky; top: 0; z-index: 100; }
-    .header h1 { font-size: 20px; font-weight: 600; }
-    .header .total-box { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 12px 16px; margin-top: 12px; }
-    .header .total-box .label { font-size: 13px; opacity: 0.9; }
-    .header .total-box .valor { font-size: 28px; font-weight: 700; }
-    .header .total-box.parcial { margin-top: 8px; }
-    .header .total-box.parcial .valor { font-size: 22px; }
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      color: white;
+      padding: 16px 16px 14px;
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    .totais-row { display: flex; gap: 10px; margin-bottom: 8px; }
+    .total-card {
+      flex: 1;
+      background: rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 10px 12px;
+      backdrop-filter: blur(4px);
+    }
+    .total-card .label { font-size: 11px; opacity: 0.85; margin-bottom: 2px; }
+    .total-card .valor { font-size: 20px; font-weight: 700; }
+    .total-geral {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .total-geral .valor { font-size: 24px; }
+
+    /* CATEGORIAS */
+    .categorias {
+      background: white;
+      padding: 14px 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--cinza);
+    }
+    .cat-title { font-size: 13px; font-weight: 700; color: var(--cinza-esc); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cat-item { margin-bottom: 10px; }
+    .cat-item:last-child { margin-bottom: 0; }
+    .cat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .cat-nome { font-size: 13px; font-weight: 600; }
+    .cat-valores { font-size: 11px; color: var(--cinza-esc); font-weight: 500; }
+    .cat-bar-bg { height: 8px; background: var(--cinza); border-radius: 4px; overflow: hidden; }
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+    }
 
     /* LISTA */
-    .lista { padding: 16px; }
-    .lista h2 { font-size: 16px; color: var(--cinza-esc); margin-bottom: 12px; }
-    .item { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
-    .item .info { flex: 1; }
-    .item .produto { font-size: 15px; font-weight: 600; }
-    .item .meta { font-size: 12px; color: var(--cinza-esc); margin-top: 4px; }
-    .item .badge { font-size: 11px; background: var(--cinza); padding: 2px 8px; border-radius: 10px; margin-right: 6px; }
-    .item-actions { display: flex; align-items: center; gap: 4px; }
-    .item .valor { font-size: 16px; font-weight: 700; color: var(--vermelho); white-space: nowrap; }
-    .btn-editar { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px 8px; color: var(--cinza-esc); }
-    .btn-deletar { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px 8px; color: var(--vermelho); }
-    .vazio { text-align: center; color: var(--cinza-esc); padding: 40px 20px; font-size: 14px; }
+    .lista {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 10px 16px 80px;
+    }
+    .lista-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .lista-header h2 { font-size: 14px; font-weight: 700; color: var(--cinza-esc); text-transform: uppercase; letter-spacing: 0.5px; }
+    .lista-count { font-size: 12px; color: var(--cinza-esc); background: var(--cinza); padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+    .item {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: transform 0.15s ease;
+    }
+    .item:active { transform: scale(0.98); }
+    .item .info { flex: 1; min-width: 0; }
+    .item .produto { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item .meta { font-size: 11px; color: var(--cinza-esc); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+    .badge { font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+    .badge-cat { background: #dbeafe; color: #1e40af; }
+    .badge-user { background: var(--cinza); color: var(--cinza-esc); }
+    .badge-avista { background: #dcfce7; color: #166534; }
+    .badge-parcelado { background: #fef3c7; color: #92400e; }
+    .item-actions { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
+    .item .valor { font-size: 15px; font-weight: 700; color: var(--vermelho); white-space: nowrap; }
+    .btn-editar, .btn-deletar { background: none; border: none; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 8px; }
+    .btn-editar { color: var(--cinza-esc); }
+    .btn-deletar { color: var(--vermelho); }
+    .btn-editar:active, .btn-deletar:active { background: var(--cinza); }
+    .vazio { text-align: center; color: var(--cinza-esc); padding: 30px 20px; font-size: 13px; }
+    .status { text-align: center; padding: 8px; font-size: 12px; color: var(--cinza-esc); }
 
     /* FAB */
-    .fab { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; background: var(--azul); color: white; border: none; border-radius: 50%; font-size: 28px; box-shadow: 0 4px 12px rgba(26,115,232,0.4); cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center; }
+    .fab {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 28px;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.45);
+      cursor: pointer;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+    .fab:active { transform: scale(0.9); }
 
     /* MODAL */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: flex-end; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200; justify-content: center; align-items: flex-end; }
     .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 20px 32px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+    .modal {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px 32px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .modal h2 { font-size: 20px; margin-bottom: 20px; }
-    .campo { margin-bottom: 16px; }
-    .campo label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-    .campo input, .campo select { width: 100%; border: 2px solid #e0e0e0; border-radius: 10px; padding: 12px 14px; font-size: 16px; transition: border-color 0.2s; }
+    .modal-handle { width: 40px; height: 4px; background: var(--cinza); border-radius: 2px; margin: 0 auto 16px; }
+    .modal h2 { font-size: 18px; margin-bottom: 16px; font-weight: 700; }
+    .campo { margin-bottom: 14px; }
+    .campo label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: var(--texto); }
+    .campo input, .campo select {
+      width: 100%;
+      border: 2px solid var(--cinza);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+      background: white;
+    }
     .campo input:focus, .campo select:focus { outline: none; border-color: var(--azul); }
-    .btn-salvar { width: 100%; background: var(--azul); color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
-    .btn-salvar:active { background: var(--azul-escuro); }
+    .btn-salvar {
+      width: 100%;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: transform 0.15s ease;
+    }
+    .btn-salvar:active { transform: scale(0.97); }
     .btn-fechar { width: 100%; background: transparent; color: var(--cinza-esc); border: none; padding: 12px; font-size: 14px; cursor: pointer; margin-top: 4px; }
 
-    /* STATUS */
-    .status { text-align: center; padding: 8px; font-size: 13px; color: var(--cinza-esc); }
-    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--verde); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; word-wrap: break-word; }
-    .toast.show { opacity: 1; }
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--verde);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+      max-width: 90%;
+      text-align: center;
+      word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
     .toast.erro { background: var(--vermelho); }
   </style>
 </head>
@@ -63,18 +211,32 @@
 
   <div class="header">
     <h1>💳 Gastos no Cartão</h1>
-    <div class="total-box">
-      <div class="label">Total gasto neste mês</div>
-      <div class="valor" id="totalMes">R$ 0,00</div>
+    <div class="totais-row">
+      <div class="total-card">
+        <div class="label">À vista (este mês)</div>
+        <div class="valor" id="totalAvista">R$ 0,00</div>
+      </div>
+      <div class="total-card">
+        <div class="label">Parcelado acumulado</div>
+        <div class="valor" id="totalParcelado">R$ 0,00</div>
+      </div>
     </div>
-    <div class="total-box parcial">
-      <div class="label">Total parcial acumulado</div>
-      <div class="valor" id="totalParcial">R$ 0,00</div>
+    <div class="total-card total-geral">
+      <div class="label">Total geral</div>
+      <div class="valor" id="totalGeral">R$ 0,00</div>
     </div>
   </div>
 
+  <div class="categorias">
+    <div class="cat-title">📊 Orçamento por categoria</div>
+    <div id="categoriasContainer"></div>
+  </div>
+
   <div class="lista">
-    <h2>Compras registradas</h2>
+    <div class="lista-header">
+      <h2>Compras registradas</h2>
+      <span class="lista-count" id="listaCount">0</span>
+    </div>
     <div id="listaCompras"></div>
     <div class="status" id="status">Carregando…</div>
   </div>
@@ -84,6 +246,7 @@
   <!-- MODAL -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
+      <div class="modal-handle"></div>
       <h2 id="modalTitulo">Registrar compra</h2>
       <div class="campo">
         <label>Quem está registrando?</label>
@@ -99,19 +262,35 @@
       </div>
       <div class="campo">
         <label>Nome do produto</label>
-        <input type="text" id="produto" placeholder="Ex: Supermercado Pão de Açúcar">
+        <input type="text" id="produto" placeholder="Ex: Supermercado Extra">
       </div>
       <div class="campo">
         <label>Data da compra</label>
         <input type="date" id="data">
       </div>
       <div class="campo">
-        <label>Tipo de Compra</label>
-        <select id="tipoCompra">
+        <label>Categoria</label>
+        <select id="categoria">
           <option value="">Selecione…</option>
-          <option value="Hollanda">Hollanda</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Enxoval">Enxoval</option>
+          <option value="Mercado">Mercado</option>
+          <option value="Gasolina">Gasolina</option>
+          <option value="Remédio">Remédio</option>
+          <option value="Restaurante">Restaurante</option>
+          <option value="Passeios">Passeios</option>
+          <option value="Presentes">Presentes</option>
+          <option value="Outros">Outros</option>
           <option value="Fernanda">Fernanda</option>
-          <option value="Casal">Casal</option>
+          <option value="Hollanda">Hollanda</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Parcela</label>
+        <select id="parcela">
+          <option value="">Selecione…</option>
+          <option value="À vista">À vista</option>
+          <option value="Parcelado">Parcelado</option>
         </select>
       </div>
       <button class="btn-salvar" id="btnSalvar" onclick="salvarCompra()">Salvar compra</button>
