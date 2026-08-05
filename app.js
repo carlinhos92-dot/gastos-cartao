@@ -8,7 +8,9 @@ const CATEGORIAS = [
   { nome: 'Restaurante', max: 400 },
   { nome: 'Transporte', max: 1200 },
   { nome: 'Mercado', max: 1800 },
-  { nome: 'Remédio', max: 600 }
+  { nome: 'Remédio', max: 600 },
+  { nome: 'Hollanda', max: 1100 },
+  { nome: 'Fernanda', max: 1300 }
 ];
 
 var elTotalAvista = document.getElementById('totalAvista');
@@ -55,7 +57,7 @@ async function carregarCompras() {
 function recalcularTotaisLocal() {
   var totalAvista = 0;
   var totalParcelado = 0;
-  var cats = { 'Restaurante': 0, 'Transporte': 0, 'Mercado': 0, 'Remédio': 0 };
+  var cats = { 'Restaurante': 0, 'Transporte': 0, 'Mercado': 0, 'Remédio': 0, 'Hollanda': 0, 'Fernanda': 0 };
 
   for (var i = 0; i < comprasCarregadas.length; i++) {
     var c = comprasCarregadas[i];
